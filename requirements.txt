@@ -1,0 +1,7 @@
+llama-index
+deeplake
+python-dotenv
+llama_hub
+streamlit
+deeplake
+replicate
