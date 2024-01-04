@@ -5,3 +5,4 @@ llama_hub
 streamlit
 deeplake
 replicate
+gradio==3.48.0

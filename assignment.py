@@ -10,10 +10,11 @@ from llama_index.retrievers import VectorIndexRetriever
 from llama_index import get_response_synthesizer
 from llama_index.indices.postprocessor import SimilarityPostprocessor
 from llama_index.query_engine import RetrieverQueryEngine
+from llama_index.llms import Replicate
+from llama_index import ServiceContext
 import deeplake
 import re
 
-# Load environment variables
 load_dotenv()
 
 replicate_token = os.getenv("REPLICATE_API_TOKEN")
@@ -33,14 +34,14 @@ def initialize_github_client():
     github_token = os.getenv("GITHUB_TOKEN")
     return GithubClient(github_token)
 
-def main():
+def main(message, chat_history):
     if not replicate_token:
         raise EnvironmentError("Replicate token not found in environment variables")
 
     # Check for GitHub Token
     if not github_token:
         raise EnvironmentError("GitHub token not found in environment variables")
-    
+
     # Check for Activeloop Token
     if not active_loop_token:
         raise EnvironmentError("Activeloop token not found in environment variables")
@@ -48,7 +49,7 @@ def main():
     github_client = initialize_github_client()
     download_loader("GithubRepositoryReader")
 
-    github_url = input("Please enter the GitHub repository URL: ")
+    github_url = "https://github.com/facebookresearch/segment-anything"
     # owner, repo = parse_github_url(github_url)
 
     while True:
@@ -73,8 +74,7 @@ def main():
             break # Exit the loop once the valid URL is processed
         else:
             print("Invalid GitHub URL. Please try again.")
-            github_url = input("Please enter the GitHub repository URL: ")
-    
+
     print("Uploading to vector store... ")
 
     # Create vector store and upload data
@@ -83,7 +83,7 @@ def main():
         if exists:
             vector_store = DeepLakeVectorStore(
                 dataset_path=dataset_path,
-                read_only=True,
+                overwrite=False,
                 runtime={"tensor_db": True},
             )
         else:
@@ -95,10 +95,11 @@ def main():
     except Exception as e:
         print(f"An unexpected error occurred while creating or fetching the vector store: {str(e)}")
 
+    llm = Replicate(model="mistralai/mistral-7b-instruct-v0.1:5fe0a3d7ac2852264a25279d1dfb798acbc4d49711d126646594e212cb821749")
+    service_context = ServiceContext.from_defaults(llm=llm)
     storage_context = StorageContext.from_defaults(vector_store=vector_store)
-    index = VectorStoreIndex.from_documents(docs, storage_context=storage_context)
+    index = VectorStoreIndex.from_documents(docs, storage_context=storage_context, service_context=service_context)
     retriever = VectorIndexRetriever(index=index, similarity_top_k=4)
-    # query_engine = index.as_query_engine()
     response_synthesizer = get_response_synthesizer()
     query_engine = RetrieverQueryEngine.from_args(
         retriever=retriever,
@@ -108,25 +109,15 @@ def main():
             SimilarityPostprocessor(similarity_cutoff=0.7)]
     )
 
-    # intro_question = "What is the repository about?"
-    # print(f"Test question: {intro_question}")
-    # print("=" * 50)
-    # answer = query_engine.query(intro_question)
-
-    # print(f"Answer: {textwrap.fill(str(answer), 100)} \n")
-
-    while True:
-        user_question = input("Please enter your question (or type 'exit' to quit): ")
-        if user_question.lower() == "exit":
-            print("Exiting, thanks for chatting! :) ")
-            break
-
-        print(f"Your question: {user_question}")
-        print("=" * 50)
-
-        answer = query_engine.query(user_question)
-        print(f"Answer: {textwrap.fill(str(answer), 100)} \n")
 
 
-if __name__ == "__main__":
-    main()
+    user_question = message
+    answer = query_engine.query(user_question)
+    return str(answer)
+
+import gradio as gr
+
+demo = gr.ChatInterface(main).queue()
+
+demo.launch(debug=True)
+
