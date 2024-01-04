@@ -3,8 +3,12 @@
 
 This repository contains code for chatting with a GitHub Repo that leverages an Open Source large language model (LLM) to provide informative responses to user queries.
 
-## Demo
+## Project Architecture
 
+<img width="693" alt="AI_Repo" src="https://github.com/MaruthiKo/AI_Repo/assets/63769209/4d0f069a-a501-4a55-8cf4-8339a8b469a3">
+
+
+## Demo
 
 https://github.com/MaruthiKo/AI_Repo/assets/63769209/babadbb9-9095-4e58-9de2-ba43c64cdf21
 
