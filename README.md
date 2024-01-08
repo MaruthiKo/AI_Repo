@@ -59,7 +59,7 @@ pip install -r requirements.txt
 Launch the Gradio interface:
 
 ```bash
-python assignment.py
+python main.py
 ```
 
 ## Interact with the system
